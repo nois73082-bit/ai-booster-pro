@@ -7,8 +7,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Java
@@ -17,50 +20,27 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install SDK packages
+      - name: Set up Android SDK
         run: |
-          SDKMANAGER=$(find "$ANDROID_HOME" -type f -name sdkmanager | head -n 1)
-          if [ -z "$SDKMANAGER" ]; then
-            echo "ERROR: sdkmanager not found"
-            find "$ANDROID_HOME" -maxdepth 4 -type f | head -100
-            exit 1
-          fi
-          yes | "$SDKMANAGER" --licenses || true
-          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          sdkmanager --version
+          yes | sdkmanager --licenses || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Check project archive
-        run: |
-          ls -lah
-          unzip -l AI_Booster_Pro_Android_Project.zip
-
       - name: Extract project
         run: unzip -o AI_Booster_Pro_Android_Project.zip -d source
 
-      - name: Find Gradle project
-        run: |
-          find source -name settings.gradle -o -name settings.gradle.kts
-
       - name: Build APK
-        run: |
-          PROJECT_DIR=$(dirname "$(find source -name settings.gradle -o -name settings.gradle.kts | head -n 1)")
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: Gradle project not found"
-            exit 1
-          fi
-          cd "$PROJECT_DIR"
-          gradle assembleDebug
+        working-directory: source/AI_Booster_Pro_Android
+        run: gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: AI-Booster-Pro-APK
-          path: source/**/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          path: source/AI_Booster_Pro_Android/app/build/outputs/apk/debug/app-debug.apk
