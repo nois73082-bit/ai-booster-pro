@@ -16,13 +16,16 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Install Android SDK packages
+- name: Install Android SDK packages
         run: |
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
-          yes | "$SDKMANAGER" --licenses
+          SDKMANAGER=$(find "$ANDROID_HOME" -type f -name sdkmanager | head -n 1)
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found"
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses || true
           "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
-
+        
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
